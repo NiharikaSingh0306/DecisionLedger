@@ -7,10 +7,30 @@ import { UpdateDecisionDto } from './dto/update-decision.dto';
 @Injectable()
 export class DecisionsService {
     constructor(private readonly prisma: PrismaService) { }
-    // create a new decision
+    // create a new decision along with its first version
     async create(createDecisionDto: CreateDecisionDto) {
-        return this.prisma.decision.create({
-            data: createDecisionDto,
+        return this.prisma.$transaction(async (tx) => {
+            // 1)create the decision
+            const decision = await tx.decision.create({
+                data: createDecisionDto,
+            });
+
+            // 2)create its initial version v1
+            await tx.decisionVersion.create({
+                data: {
+                    decisionId: decision.id,
+                    versionNumber: 1,
+                    title: decision.title,
+                    context: decision.context,
+                    options: decision.options ?? undefined,
+                    decisionSummary: decision.decisionSummary,
+                    rationale: decision.rationale,
+                    status: decision.status,
+                    owner: decision.owner,
+                },
+            });
+
+            return decision;
         });
     }
     // retrieve all decisions
@@ -33,13 +53,48 @@ export class DecisionsService {
 
         return decision;
     }
-    // update an existing decision
+    // update an existing decision and create a new version
     async update(id: string, updateDecisionDto: UpdateDecisionDto) {
-        await this.findOne(id);
+        return this.prisma.$transaction(async (tx) => {
+            // 1)check whether the decision exists
+            const existingDecision = await tx.decision.findUnique({
+                where: { id },
+            });
 
-        return this.prisma.decision.update({
-            where: { id },
-            data: updateDecisionDto,
+            if (!existingDecision) {
+                throw new NotFoundException(`Decision with ID ${id} not found`);
+            }
+
+            // 2)update the current decision
+            const updatedDecision = await tx.decision.update({
+                where: { id },
+                data: updateDecisionDto,
+            });
+
+            // 3)find the latest version number
+            const latestVersion = await tx.decisionVersion.findFirst({
+                where: { decisionId: id },
+                orderBy: { versionNumber: 'desc' },
+            });
+
+            const nextVersionNumber = (latestVersion?.versionNumber ?? 0) + 1;
+
+            // 4)save a new snapshot
+            await tx.decisionVersion.create({
+                data: {
+                    decisionId: updatedDecision.id,
+                    versionNumber: nextVersionNumber,
+                    title: updatedDecision.title,
+                    context: updatedDecision.context,
+                    options: updatedDecision.options ?? undefined,
+                    decisionSummary: updatedDecision.decisionSummary,
+                    rationale: updatedDecision.rationale,
+                    status: updatedDecision.status,
+                    owner: updatedDecision.owner,
+                },
+            });
+
+            return updatedDecision;
         });
     }
 }
