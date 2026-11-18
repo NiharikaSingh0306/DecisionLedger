@@ -97,4 +97,33 @@ export class DecisionsService {
             return updatedDecision;
         });
     }
+    //retrieve all versions of a decision
+    async findVersions(id: string) {
+        await this.findOne(id);
+
+        return this.prisma.decisionVersion.findMany({
+            where: { decisionId: id },
+            orderBy: {
+                versionNumber: 'desc',
+            },
+        });
+    }
+    //retrieve a specific version of a decision
+    async findVersion(id: string, versionNumber: number) {
+        await this.findOne(id);
+        const version = await this.prisma.decisionVersion.findUnique({
+            where: {
+                decisionId_versionNumber: {
+                    decisionId: id,
+                    versionNumber,
+                },
+            },
+        });
+        if (!version) {
+            throw new NotFoundException(
+                `Version ${versionNumber} not found for decision ${id}`,
+            );
+        }
+        return version;
+    }
 }

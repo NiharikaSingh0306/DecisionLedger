@@ -6,6 +6,7 @@ import {
     Body,
     Param,
     Patch,
+    ParseIntPipe,
 } from '@nestjs/common';
 
 import { DecisionsService } from './decisions.service';
@@ -41,5 +42,20 @@ export class DecisionsController {
         @Body() updateDecisionDto: UpdateDecisionDto,
     ) {
         return this.decisionsService.update(id, updateDecisionDto);
+    }
+
+    // get all versions of a decision
+    @Get(':id/versions')
+    findVersions(@Param('id') id: string) {
+        return this.decisionsService.findVersions(id);
+    }
+
+    // get a specific version of a decision
+    @Get(':id/versions/:versionNumber')
+    findVersion(
+        @Param('id') id: string,
+        @Param('versionNumber', ParseIntPipe) versionNumber: number,
+    ) {
+        return this.decisionsService.findVersion(id, versionNumber);
     }
 }
