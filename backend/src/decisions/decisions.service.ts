@@ -1,9 +1,9 @@
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDecisionDto } from './dto/create-decision.dto';
 import { UpdateDecisionDto } from './dto/update-decision.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, DecisionStatus } from '@prisma/client';
 
 @Injectable()
 export class DecisionsService {
@@ -68,24 +68,43 @@ export class DecisionsService {
             });
 
             if (!existingDecision) {
-                throw new NotFoundException(`Decision with ID ${id} not found`);
+                throw new NotFoundException(
+                    `Decision with ID ${id} not found`,
+                );
             }
 
-            // 2. Update the current decision
+            // 2. Validate status transition if status is being changed
+            const requestedStatus = decisionData.status;
+
+            if (
+                requestedStatus !== undefined &&
+                requestedStatus !== existingDecision.status
+            ) {
+                const allowed =
+                    this.allowedTransitions[existingDecision.status];
+
+                if (!allowed.includes(requestedStatus)) {
+                    throw new BadRequestException(
+                        `Invalid status transition: ${existingDecision.status} -> ${requestedStatus}`,
+                    );
+                }
+            }
+            // 3. Update the current decision
             const updatedDecision = await tx.decision.update({
                 where: { id },
                 data: decisionData,
             });
 
-            // 3. Find the latest version number
+            // 4. Find the latest version number
             const latestVersion = await tx.decisionVersion.findFirst({
                 where: { decisionId: id },
                 orderBy: { versionNumber: 'desc' },
             });
 
-            const nextVersionNumber = (latestVersion?.versionNumber ?? 0) + 1;
+            const nextVersionNumber =
+                (latestVersion?.versionNumber ?? 0) + 1;
 
-            // 4. Save a new snapshot with its commit message
+            // 5. Save a new snapshot
             await tx.decisionVersion.create({
                 data: {
                     decisionId: updatedDecision.id,
@@ -104,6 +123,15 @@ export class DecisionsService {
             return updatedDecision;
         });
     }
+    private readonly allowedTransitions: Record<
+        DecisionStatus,
+        DecisionStatus[]
+    > = {
+            PROPOSED: ['ACCEPTED', 'REVERSED'],
+            ACCEPTED: ['SUPERSEDED', 'REVERSED'],
+            SUPERSEDED: [],
+            REVERSED: [],
+        };
     //retrieve all versions of a decision
     async findVersions(id: string) {
         await this.findOne(id);

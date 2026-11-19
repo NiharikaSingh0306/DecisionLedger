@@ -147,16 +147,21 @@ A restoration creates a new version and records its source:
 
 ---
 
-## Decision Lifecycle
+## Decision Lifecycle Management
 
-The current decision status values are:
+Decision Ledger enforces valid status transitions to maintain decision integrity.
 
-- `PROPOSED`
-- `ACCEPTED`
-- `SUPERSEDED`
-- `REVERSED`
+| Current Status | Allowed Next Status |
+|---|---|
+| PROPOSED | ACCEPTED, REVERSED |
+| ACCEPTED | SUPERSEDED, REVERSED |
+| SUPERSEDED | None |
+| REVERSED | None |
 
-These represent the available decision states. Lifecycle transition rules are planned for a future milestone.
+- Invalid status transitions return HTTP 400.
+- Every valid update creates a new decision version.
+- Rejected transitions do not modify the decision or its version history.
+- Restoring a historical version is handled separately from normal lifecycle transitions.
 
 ---
 
@@ -235,7 +240,7 @@ The project is being developed incrementally.
 - [x] Version comparison engine
 - [x] Historical version restoration
 - [x] Commit messages and restoration metadata
-- [ ] Decision lifecycle management
+- [x] Decision lifecycle management
 - [ ] Decision relationships and dependency chains
 - [ ] Search, filtering, and pagination
 - [ ] Backend hardening and automated testing
