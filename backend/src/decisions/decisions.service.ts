@@ -38,12 +38,68 @@ export class DecisionsService {
         });
     }
     // retrieve all decisions
-    async findAll() {
-        return this.prisma.decision.findMany({
-            orderBy: {
-                createdAt: 'desc',
+    async findAll(filters: {
+        search?: string;
+        status?: DecisionStatus;
+        owner?: string;
+        page?: number;
+        limit?: number;
+    }) {
+        const {
+            search,
+            status,
+            owner,
+            page = 1,
+            limit = 10,
+        } = filters;
+
+        const where: Prisma.DecisionWhereInput = {
+            ...(status && { status }),
+            ...(owner && {
+                owner: {
+                    contains: owner,
+                    mode: 'insensitive',
+                },
+            }),
+            ...(search && {
+                OR: [
+                    {
+                        title: {
+                            contains: search,
+                            mode: 'insensitive',
+                        },
+                    },
+                    {
+                        context: {
+                            contains: search,
+                            mode: 'insensitive',
+                        },
+                    },
+                ],
+            }),
+        };
+
+        const [decisions, total] = await this.prisma.$transaction([
+            this.prisma.decision.findMany({
+                where,
+                orderBy: {
+                    createdAt: 'desc',
+                },
+                skip: (page - 1) * limit,
+                take: limit,
+            }),
+            this.prisma.decision.count({ where }),
+        ]);
+
+        return {
+            data: decisions,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
             },
-        });
+        };
     }
     // retrieve one decision by ID
     async findOne(id: string) {

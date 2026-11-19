@@ -146,6 +146,33 @@ A restoration creates a new version and records its source:
 ```
 
 ---
+## Search, Filtering & Pagination
+
+The decisions API supports searching, filtering, and paginating decision records.
+
+### Query Parameters
+
+| Parameter | Description | Example |
+|---|---|---|
+| search | Search title and context | search=database |
+| status | Filter by decision status | status=ACCEPTED |
+| owner | Filter by owner | owner=Niharika |
+| page | Page number (default: 1) | page=1 |
+| limit | Records per page (default: 10, max: 100) | limit=10 |
+
+### Example Request
+
+GET /decisions?search=PostgreSQL&status=ACCEPTED&owner=Niharika&page=1&limit=10
+
+### Response
+
+Returns matching decisions along with pagination metadata:
+- total: Total matching records
+- page: Current page
+- limit: Records per page
+- totalPages: Total number of pages
+
+Invalid query parameters return HTTP 400 Bad Request.
 
 ## Decision Lifecycle Management
 
@@ -241,8 +268,7 @@ The project is being developed incrementally.
 - [x] Historical version restoration
 - [x] Commit messages and restoration metadata
 - [x] Decision lifecycle management
-- [ ] Decision relationships and dependency chains
-- [ ] Search, filtering, and pagination
+- [x] Search, filtering, and pagination
 - [ ] Backend hardening and automated testing
 - [ ] JWT authentication and role-based access control
 - [ ] GitHub integration

@@ -10,10 +10,12 @@ import {
     ParseIntPipe,
 } from '@nestjs/common';
 import { RestoreVersionDto } from './dto/restore-version.dto';
-
+import { ValidationPipe } from '@nestjs/common';
+import { FindDecisionsDto } from './dto/find-decisions.dto';
 import { DecisionsService } from './decisions.service';
 import { CreateDecisionDto } from './dto/create-decision.dto';
 import { UpdateDecisionDto } from './dto/update-decision.dto';
+import { DecisionStatus } from '@prisma/client';
 
 @Controller('decisions')
 export class DecisionsController {
@@ -27,8 +29,11 @@ export class DecisionsController {
 
     // get all decisions
     @Get()
-    findAll() {
-        return this.decisionsService.findAll();
+    findAll(
+        @Query(new ValidationPipe({ transform: true }))
+        findDecisionsDto: FindDecisionsDto,
+    ) {
+        return this.decisionsService.findAll(findDecisionsDto);
     }
 
     // get one decision
