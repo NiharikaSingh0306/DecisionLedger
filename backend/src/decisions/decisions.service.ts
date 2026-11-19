@@ -3,6 +3,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDecisionDto } from './dto/create-decision.dto';
 import { UpdateDecisionDto } from './dto/update-decision.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class DecisionsService {
@@ -190,4 +191,73 @@ export class DecisionsService {
             changes,
         };
     }
+
+    //restore an older version without deleting the previoius ones
+    async restoreVersion(id: string, versionNumber: number) {
+        return this.prisma.$transaction(async (tx) => {
+            // 1)check whether the decision exists
+            await this.findOne(id);
+            //historical version to restore
+            const version = await tx.decisionVersion.findUnique({
+                where: {
+                    decisionId_versionNumber: {
+                        decisionId: id,
+                        versionNumber,
+                    },
+                },
+            });
+            if (!version) {
+                throw new NotFoundException(
+                    `Version ${versionNumber} not found for decision ${id}`,
+                );
+            }
+            // 3)restore the historical data into the current decision
+            const restoredDecision = await tx.decision.update({
+                where: { id },
+                data: {
+                    title: version.title,
+                    context: version.context,
+                    options:
+                        version.options === null
+                            ? Prisma.DbNull
+                            : version.options as Prisma.InputJsonValue,
+                    decisionSummary: version.decisionSummary,
+                    rationale: version.rationale,
+                    status: version.status,
+                    owner: version.owner,
+                },
+            });
+            // 4)find the latest version number
+            const latestVersion = await tx.decisionVersion.findFirst({
+                where: { decisionId: id },
+                orderBy: { versionNumber: 'desc' },
+            });
+            const nextVersionNumber =
+                (latestVersion?.versionNumber ?? 0) + 1;
+            // 5)create a new snapshot of the restored decision
+            await tx.decisionVersion.create({
+                data: {
+                    decisionId: id,
+                    versionNumber: nextVersionNumber,
+                    title: restoredDecision.title,
+                    context: restoredDecision.context,
+                    options:
+                        restoredDecision.options === null
+                            ? Prisma.DbNull
+                            : restoredDecision.options as Prisma.InputJsonValue,
+                    decisionSummary: restoredDecision.decisionSummary,
+                    rationale: restoredDecision.rationale,
+                    status: restoredDecision.status,
+                    owner: restoredDecision.owner,
+                },
+            });
+            return {
+                message: `Successfully restored version ${versionNumber}`,
+                restoredFromVersion: versionNumber,
+                newVersionNumber: nextVersionNumber,
+                decision: restoredDecision,
+            };
+        });
+    }
+
 }

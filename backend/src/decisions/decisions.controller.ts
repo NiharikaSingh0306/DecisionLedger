@@ -67,6 +67,13 @@ export class DecisionsController {
     ) {
         return this.decisionsService.findVersion(id, versionNumber);
     }
-
+    //restore a specific historical version
+    @Post(':id/versions/:versionNumber/restore')
+    restoreVersion(
+        @Param('id') id: string,
+        @Param('versionNumber', ParseIntPipe) versionNumber: number,
+    ) {
+        return this.decisionsService.restoreVersion(id, versionNumber);
+    }
 
 }
