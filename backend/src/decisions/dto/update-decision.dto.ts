@@ -42,4 +42,8 @@ export class UpdateDecisionDto {
     @IsOptional()
     @IsString()
     owner?: string;
+
+    @IsOptional()
+    @IsString()
+    commitMessage?: string;
 }

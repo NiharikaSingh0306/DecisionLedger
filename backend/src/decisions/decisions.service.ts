@@ -10,13 +10,15 @@ export class DecisionsService {
     constructor(private readonly prisma: PrismaService) { }
     // create a new decision along with its first version
     async create(createDecisionDto: CreateDecisionDto) {
+        const { commitMessage, ...decisionData } = createDecisionDto;
+
         return this.prisma.$transaction(async (tx) => {
-            // 1)create the decision
+            // 1. Create the decision
             const decision = await tx.decision.create({
-                data: createDecisionDto,
+                data: decisionData,
             });
 
-            // 2)create its initial version v1
+            // 2. Create its initial version (V1)
             await tx.decisionVersion.create({
                 data: {
                     decisionId: decision.id,
@@ -28,6 +30,7 @@ export class DecisionsService {
                     rationale: decision.rationale,
                     status: decision.status,
                     owner: decision.owner,
+                    commitMessage: commitMessage ?? 'Initial decision created',
                 },
             });
 
@@ -56,8 +59,10 @@ export class DecisionsService {
     }
     // update an existing decision and create a new version
     async update(id: string, updateDecisionDto: UpdateDecisionDto) {
+        const { commitMessage, ...decisionData } = updateDecisionDto;
+
         return this.prisma.$transaction(async (tx) => {
-            // 1)check whether the decision exists
+            // 1. Check whether the decision exists
             const existingDecision = await tx.decision.findUnique({
                 where: { id },
             });
@@ -66,13 +71,13 @@ export class DecisionsService {
                 throw new NotFoundException(`Decision with ID ${id} not found`);
             }
 
-            // 2)update the current decision
+            // 2. Update the current decision
             const updatedDecision = await tx.decision.update({
                 where: { id },
-                data: updateDecisionDto,
+                data: decisionData,
             });
 
-            // 3)find the latest version number
+            // 3. Find the latest version number
             const latestVersion = await tx.decisionVersion.findFirst({
                 where: { decisionId: id },
                 orderBy: { versionNumber: 'desc' },
@@ -80,7 +85,7 @@ export class DecisionsService {
 
             const nextVersionNumber = (latestVersion?.versionNumber ?? 0) + 1;
 
-            // 4)save a new snapshot
+            // 4. Save a new snapshot with its commit message
             await tx.decisionVersion.create({
                 data: {
                     decisionId: updatedDecision.id,
@@ -92,6 +97,7 @@ export class DecisionsService {
                     rationale: updatedDecision.rationale,
                     status: updatedDecision.status,
                     owner: updatedDecision.owner,
+                    commitMessage: commitMessage ?? 'Decision updated',
                 },
             });
 
@@ -193,11 +199,24 @@ export class DecisionsService {
     }
 
     //restore an older version without deleting the previoius ones
-    async restoreVersion(id: string, versionNumber: number) {
+    async restoreVersion(
+        id: string,
+        versionNumber: number,
+        commitMessage?: string,
+    ) {
         return this.prisma.$transaction(async (tx) => {
-            // 1)check whether the decision exists
-            await this.findOne(id);
-            //historical version to restore
+            // 1. Check whether the decision exists
+            const decision = await tx.decision.findUnique({
+                where: { id },
+            });
+
+            if (!decision) {
+                throw new NotFoundException(
+                    `Decision with ID ${id} not found`,
+                );
+            }
+
+            // 2. Find the historical version
             const version = await tx.decisionVersion.findUnique({
                 where: {
                     decisionId_versionNumber: {
@@ -206,12 +225,14 @@ export class DecisionsService {
                     },
                 },
             });
+
             if (!version) {
                 throw new NotFoundException(
                     `Version ${versionNumber} not found for decision ${id}`,
                 );
             }
-            // 3)restore the historical data into the current decision
+
+            // 3. Restore historical data
             const restoredDecision = await tx.decision.update({
                 where: { id },
                 data: {
@@ -227,14 +248,17 @@ export class DecisionsService {
                     owner: version.owner,
                 },
             });
-            // 4)find the latest version number
+
+            // 4. Find the latest version number
             const latestVersion = await tx.decisionVersion.findFirst({
                 where: { decisionId: id },
                 orderBy: { versionNumber: 'desc' },
             });
+
             const nextVersionNumber =
                 (latestVersion?.versionNumber ?? 0) + 1;
-            // 5)create a new snapshot of the restored decision
+
+            // 5. Create a new snapshot
             await tx.decisionVersion.create({
                 data: {
                     decisionId: id,
@@ -249,8 +273,13 @@ export class DecisionsService {
                     rationale: restoredDecision.rationale,
                     status: restoredDecision.status,
                     owner: restoredDecision.owner,
+                    commitMessage:
+                        commitMessage ??
+                        `Restored to version ${versionNumber}`,
+                    restoredFromVersion: versionNumber,
                 },
             });
+
             return {
                 message: `Successfully restored version ${versionNumber}`,
                 restoredFromVersion: versionNumber,

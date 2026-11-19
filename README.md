@@ -1,45 +1,264 @@
 # Decision Ledger
 
-A version-controlled decision audit trail for engineering teams.
+**A Git-inspired, version-controlled decision management system.**
 
-## Problem
+Decision Ledger is a backend-driven application designed to record, track, compare, and restore important technical and organizational decisions.
 
-Important engineering decisions are often scattered across conversations,
-tickets, and documents. This makes it difficult to understand why a system
-was designed a particular way or whether an older decision is still valid.
+Inspired by Git's version-control philosophy, it maintains a chronological history of decisions, ensuring that every change is traceable and previous versions are preserved.
 
-## Solution
+Instead of simply storing the latest decision, Decision Ledger captures how and why a decision evolves over time.
 
-Decision Ledger provides a structured, searchable record of decisions,
-their rationale, their lifecycle, and their relationships to newer decisions.
+---
 
-## Planned Features
+## Key Features
 
-- Structured decision records with unique IDs
-- Decision lifecycle and superseding relationships
-- Search and filtering
-- Append-only audit history
-- Decision chain visualization
-- GitHub pull request integration
+### 1. Decision Management (CRUD)
+- Create new decisions.
+- Retrieve all decisions.
+- Retrieve an individual decision.
+- Update existing decisions.
+- Track decision status and ownership.
+
+### 2. Automatic Version Control
+- Automatically creates Version 1 when a decision is created.
+- Creates a new snapshot whenever a decision is updated.
+- Maintains sequential version numbers.
+- Preserves historical snapshots instead of overwriting them.
+
+### 3. Decision History
+- Retrieve the complete version history of a decision.
+- Retrieve a specific historical version.
+- View historical decision details independently.
+
+### 4. Version Comparison (Diff Engine)
+- Compare any two versions of a decision.
+- Identify modified fields.
+- Display old and new values for every changed field.
+- Return an empty changes object when versions are identical.
+
+### 5. Version Restoration
+- Restore a decision to any previous version.
+- Create a new version after restoration instead of overwriting history.
+- Preserve the original historical snapshots.
+- Track which version was restored.
+
+### 6. Commit Messages & Version Metadata
+- Attach meaningful commit messages to decision changes.
+- Record why a decision was created, modified, or restored.
+- Track the source version during restoration.
+- Maintain timestamps for historical versions.
+
+---
 
 ## Tech Stack
 
-- Frontend: React, TypeScript, Tailwind CSS
-- Backend: NestJS, Node.js, TypeScript
-- Database: PostgreSQL
-- ORM: Prisma
-- Testing: Jest
-- DevOps: Docker and GitHub Actions
+| Technology | Purpose |
+|---|---|
+| NestJS | Backend framework |
+| TypeScript | Programming language |
+| PostgreSQL | Relational database |
+| Prisma ORM | Database access and migrations |
+| class-validator | Request validation |
+| REST API | Client-server communication |
 
-## Project Status
+---
 
-Phase 1 � Project foundation in progress.
+## Database Design
 
-## Development
+Decision Ledger currently uses two primary models:
 
-Backend setup and run instructions will be documented here as the
-implementation progresses.
+**Decision**
+- Stores the latest state of a decision.
+- Contains title, context, options, rationale, summary, status, and owner.
+- Tracks creation and update timestamps.
 
-## License
+**DecisionVersion**
+- Stores historical snapshots of decisions.
+- Maintains sequential version numbers.
+- Stores commit messages and restoration metadata.
+- Preserves previous states independently.
 
-MIT
+### Relationship
+
+One decision can have multiple historical versions.
+
+`Decision (1) → DecisionVersion (Many)`
+
+---
+
+## API Documentation
+
+Base URL: `http://localhost:3000`
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/decisions` | Create a decision |
+| GET | `/decisions` | Retrieve all decisions |
+| GET | `/decisions/:id` | Retrieve a decision |
+| PATCH | `/decisions/:id` | Update a decision |
+| GET | `/decisions/:id/versions` | Retrieve version history |
+| GET | `/decisions/:id/versions/:versionNumber` | Retrieve a specific version |
+| GET | `/decisions/:id/versions/compare?from=1&to=2` | Compare two versions |
+| POST | `/decisions/:id/versions/:versionNumber/restore` | Restore a historical version |
+
+### Example: Create a Decision
+
+```json
+{
+  "title": "Choose PostgreSQL for Decision Ledger",
+  "context": "We need a reliable relational database.",
+  "options": ["MongoDB", "PostgreSQL", "MySQL"],
+  "decisionSummary": "Use PostgreSQL as the primary database.",
+  "rationale": "PostgreSQL provides ACID transactions and relational integrity.",
+  "status": "ACCEPTED",
+  "owner": "Niharika",
+  "commitMessage": "Initial database selection"
+}
+```
+
+### Example: Update a Decision
+
+```json
+{
+  "rationale": "Updated rationale after technical review",
+  "commitMessage": "Updated rationale after technical review"
+}
+```
+
+### Example: Restore a Version
+
+`POST /decisions/:id/versions/1/restore`
+
+```json
+{
+  "commitMessage": "Restored original decision after reviewing alternatives"
+}
+```
+
+A restoration creates a new version and records its source:
+
+```json
+{
+  "versionNumber": 5,
+  "commitMessage": "Restored original decision after reviewing alternatives",
+  "restoredFromVersion": 1
+}
+```
+
+---
+
+## Decision Lifecycle
+
+The current decision status values are:
+
+- `PROPOSED`
+- `ACCEPTED`
+- `SUPERSEDED`
+- `REVERSED`
+
+These represent the available decision states. Lifecycle transition rules are planned for a future milestone.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js
+- npm
+- PostgreSQL
+- Git
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/NiharikaSingh0306/DecisionLedger.git
+```
+
+### 2. Navigate to the backend
+
+```bash
+cd DecisionLedger/backend
+```
+
+### 3. Install dependencies
+
+```bash
+npm install
+```
+
+### 4. Configure environment variables
+
+Create a `.env` file inside the backend directory:
+
+```env
+DATABASE_URL="postgresql://USERNAME:PASSWORD@localhost:5432/decision_ledger"
+SHADOW_DATABASE_URL="postgresql://USERNAME:PASSWORD@localhost:5432/decision_ledger_shadow"
+```
+
+Replace the placeholders with your PostgreSQL credentials and configure the shadow database.
+
+### 5. Run database migrations
+
+```bash
+npx prisma migrate dev
+```
+
+### 6. Generate Prisma Client
+
+```bash
+npx prisma generate
+```
+
+### 7. Start the development server
+
+```bash
+npm run start:dev
+```
+
+The backend should now be accessible at:
+
+`http://localhost:3000`
+
+---
+
+## Project Roadmap
+
+The project is being developed incrementally.
+
+- [x] NestJS backend setup
+- [x] PostgreSQL integration
+- [x] Decision CRUD APIs
+- [x] Prisma database migrations
+- [x] Decision versioning
+- [x] Historical version retrieval
+- [x] Version comparison engine
+- [x] Historical version restoration
+- [x] Commit messages and restoration metadata
+- [ ] Decision lifecycle management
+- [ ] Decision relationships and dependency chains
+- [ ] Search, filtering, and pagination
+- [ ] Backend hardening and automated testing
+- [ ] JWT authentication and role-based access control
+- [ ] GitHub integration
+- [ ] React frontend
+- [ ] Deployment and production documentation
+
+---
+
+## Vision
+
+The long-term goal of Decision Ledger is to bring version-control principles to organizational decision-making.
+
+Just as Git tracks how code evolves, Decision Ledger aims to track how decisions evolve — including their reasoning, alternatives, dependencies, and historical context.
+
+**Because understanding why something was built is just as important as knowing what was built.**
+
+---
+
+## Author
+
+**Niharika Singh**
+
+
+

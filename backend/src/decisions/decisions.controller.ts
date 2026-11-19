@@ -9,6 +9,7 @@ import {
     Patch,
     ParseIntPipe,
 } from '@nestjs/common';
+import { RestoreVersionDto } from './dto/restore-version.dto';
 
 import { DecisionsService } from './decisions.service';
 import { CreateDecisionDto } from './dto/create-decision.dto';
@@ -67,13 +68,18 @@ export class DecisionsController {
     ) {
         return this.decisionsService.findVersion(id, versionNumber);
     }
-    //restore a specific historical version
+    // Restore a specific historical version
     @Post(':id/versions/:versionNumber/restore')
     restoreVersion(
         @Param('id') id: string,
         @Param('versionNumber', ParseIntPipe) versionNumber: number,
+        @Body() restoreVersionDto: RestoreVersionDto,
     ) {
-        return this.decisionsService.restoreVersion(id, versionNumber);
+        return this.decisionsService.restoreVersion(
+            id,
+            versionNumber,
+            restoreVersionDto.commitMessage,
+        );
     }
 
 }

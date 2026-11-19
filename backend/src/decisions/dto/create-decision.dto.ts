@@ -38,4 +38,9 @@ export class CreateDecisionDto {
     @IsOptional()
     @IsString()
     owner?: string;
+
+    @IsOptional()
+    @IsString()
+    commitMessage?: string;
+
 }

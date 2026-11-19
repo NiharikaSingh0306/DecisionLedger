@@ -37,25 +37,22 @@ model Decision{
 }
 
 model DecisionVersion {
-  id              String         @id @default(cuid())
-  decisionId      String
-  versionNumber   Int
+  id                  String         @id @default(cuid())
+  decisionId          String
+  versionNumber       Int
+  title               String
+  context             String
+  options             Json?
+  decisionSummary     String
+  rationale           String
+  status              DecisionStatus
+  owner               String?
+  commitMessage       String?
+  restoredFromVersion Int?
+  createdAt           DateTime       @default(now())
 
-  // snapshot of the decision at this version
-  title           String
-  context         String
-  options         Json?
-  decisionSummary String
-  rationale       String
-  status          DecisionStatus
-  owner           String?
+  decision            Decision       @relation(fields: [decisionId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime       @default(now())
-
-  // relationship with parent decision
-  decision        Decision       @relation(fields: [decisionId], references: [id], onDelete: Cascade)
-
-  // every decision must have unique version numbers
   @@unique([decisionId, versionNumber])
   @@index([decisionId])
   @@index([createdAt])
