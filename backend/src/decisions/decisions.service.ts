@@ -126,4 +126,68 @@ export class DecisionsService {
         }
         return version;
     }
+    //compare the two versions of a decision
+    async compareVersions(
+        id: string,
+        fromVersionNumber: number,
+        toVersionNumber: number,
+    ) {
+        // 1)check whether the decision exists
+        await this.findOne(id);
+
+        // 2)fetch both versions
+        const [fromVersion, toVersion] = await Promise.all([
+            this.prisma.decisionVersion.findUnique({
+                where: {
+                    decisionId_versionNumber: {
+                        decisionId: id,
+                        versionNumber: fromVersionNumber,
+                    },
+                },
+            }),
+            this.prisma.decisionVersion.findUnique({
+                where: {
+                    decisionId_versionNumber: {
+                        decisionId: id,
+                        versionNumber: toVersionNumber,
+                    },
+                },
+            }),
+        ]);
+        // 3)check whether both versions exist
+        if (!fromVersion || !toVersion) {
+            throw new NotFoundException(
+                'One or both requested versions were not found.',
+            );
+        }
+        //comparing fields
+        const fields = [
+            'title',
+            'context',
+            'options',
+            'decisionSummary',
+            'rationale',
+            'status',
+            'owner',
+        ] as const;
+        //store the changed fields
+        const changes: Record<string, { old: unknown; new: unknown }> = {};
+        for (const field of fields) {
+            const oldValue = fromVersion[field];
+            const newValue = toVersion[field];
+
+            if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+                changes[field] = {
+                    old: oldValue,
+                    new: newValue,
+                };
+            }
+        }
+        return {
+            decisionId: id,
+            fromVersion: fromVersionNumber,
+            toVersion: toVersionNumber,
+            changes,
+        };
+    }
 }

@@ -1,5 +1,6 @@
 
 import {
+    Query,
     Controller,
     Get,
     Post,
@@ -49,6 +50,14 @@ export class DecisionsController {
     findVersions(@Param('id') id: string) {
         return this.decisionsService.findVersions(id);
     }
+    @Get(':id/versions/compare')
+    compareVersions(
+        @Param('id') id: string,
+        @Query('from', ParseIntPipe) from: number,
+        @Query('to', ParseIntPipe) to: number,
+    ) {
+        return this.decisionsService.compareVersions(id, from, to);
+    }
 
     // get a specific version of a decision
     @Get(':id/versions/:versionNumber')
@@ -58,4 +67,6 @@ export class DecisionsController {
     ) {
         return this.decisionsService.findVersion(id, versionNumber);
     }
+
+
 }
