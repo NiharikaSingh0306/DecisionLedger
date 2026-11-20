@@ -192,6 +192,43 @@ Decision Ledger enforces valid status transitions to maintain decision integrity
 
 ---
 
+## Testing
+
+Decision Ledger uses Jest for backend unit testing.
+
+### Run Tests
+
+From the `backend` directory:
+
+```bash
+npm test -- --runInBand
+```
+
+### Test Coverage
+
+The current unit tests cover:
+
+- Service initialization
+- Decision creation and automatic Version 1 creation
+- Search, filtering, and pagination
+- Handling non-existent decisions
+- Valid and invalid decision status transitions
+- Automatic version creation during updates
+- Decision version history retrieval
+- Version comparison and change detection
+- Restoring older decision versions
+
+### Build Verification
+
+Run the production build:
+
+```bash
+npm run build
+```
+
+The backend has been verified with **12 passing tests across 3 test suites**.
+
+
 ## Getting Started
 
 ### Prerequisites
