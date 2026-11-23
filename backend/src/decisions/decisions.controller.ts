@@ -1,90 +1,123 @@
 
 import {
-    Query,
-    Controller,
-    Get,
-    Post,
-    Body,
-    Param,
-    Patch,
-    ParseIntPipe,
+    Query, Controller, Get, Post, Body, Param, Patch, ParseIntPipe, UseGuards, Req, ValidationPipe,
 } from '@nestjs/common';
 import { RestoreVersionDto } from './dto/restore-version.dto';
-import { ValidationPipe } from '@nestjs/common';
 import { FindDecisionsDto } from './dto/find-decisions.dto';
 import { DecisionsService } from './decisions.service';
 import { CreateDecisionDto } from './dto/create-decision.dto';
 import { UpdateDecisionDto } from './dto/update-decision.dto';
-import { DecisionStatus } from '@prisma/client';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('decisions')
+@UseGuards(JwtAuthGuard)
 export class DecisionsController {
-    constructor(private readonly decisionsService: DecisionsService) { }
+    constructor(
+        private readonly decisionsService: DecisionsService,
+    ) { }
 
-    // create a decision
+    // Create a decision
     @Post()
-    create(@Body() createDecisionDto: CreateDecisionDto) {
-        return this.decisionsService.create(createDecisionDto);
+    create(
+        @Body() createDecisionDto: CreateDecisionDto,
+        @Req() req: any,
+    ) {
+        return this.decisionsService.create(
+            createDecisionDto,
+            req.user.id,
+        );
     }
-
-    // get all decisions
+    // Get all decisions
     @Get()
     findAll(
         @Query(new ValidationPipe({ transform: true }))
         findDecisionsDto: FindDecisionsDto,
+        @Req() req: any,
     ) {
-        return this.decisionsService.findAll(findDecisionsDto);
+        return this.decisionsService.findAll(
+            findDecisionsDto,
+            req.user.id,
+        );
     }
-
-    // get one decision
+    // Get one decision
     @Get(':id')
-    findOne(@Param('id') id: string) {
-        return this.decisionsService.findOne(id);
+    findOne(
+        @Param('id') id: string,
+        @Req() req: any,
+    ) {
+        return this.decisionsService.findOne(
+            id,
+            req.user.id,
+        );
     }
-
-    // update a decision
+    // Update a decision
     @Patch(':id')
     update(
         @Param('id') id: string,
         @Body() updateDecisionDto: UpdateDecisionDto,
+        @Req() req: any,
     ) {
-        return this.decisionsService.update(id, updateDecisionDto);
+        return this.decisionsService.update(
+            id,
+            updateDecisionDto,
+            req.user.id,
+        );
+    }
+    // Get all versions
+    @Get(':id/versions')
+    findVersions(
+        @Param('id') id: string,
+        @Req() req: any,
+    ) {
+        return this.decisionsService.findVersions(
+            id,
+            req.user.id,
+        );
     }
 
-    // get all versions of a decision
-    @Get(':id/versions')
-    findVersions(@Param('id') id: string) {
-        return this.decisionsService.findVersions(id);
-    }
+    // Compare two versions
     @Get(':id/versions/compare')
     compareVersions(
         @Param('id') id: string,
         @Query('from', ParseIntPipe) from: number,
         @Query('to', ParseIntPipe) to: number,
+        @Req() req: any,
     ) {
-        return this.decisionsService.compareVersions(id, from, to);
+        return this.decisionsService.compareVersions(
+            id,
+            from,
+            to,
+            req.user.id,
+        );
     }
 
-    // get a specific version of a decision
+    // Get a specific version
     @Get(':id/versions/:versionNumber')
     findVersion(
         @Param('id') id: string,
         @Param('versionNumber', ParseIntPipe) versionNumber: number,
+        @Req() req: any,
     ) {
-        return this.decisionsService.findVersion(id, versionNumber);
+        return this.decisionsService.findVersion(
+            id,
+            versionNumber,
+            req.user.id,
+        );
     }
-    // Restore a specific historical version
+
+    // Restore a historical version
     @Post(':id/versions/:versionNumber/restore')
     restoreVersion(
         @Param('id') id: string,
         @Param('versionNumber', ParseIntPipe) versionNumber: number,
         @Body() restoreVersionDto: RestoreVersionDto,
+        @Req() req: any,
     ) {
         return this.decisionsService.restoreVersion(
             id,
             versionNumber,
             restoreVersionDto.commitMessage,
+            req.user.id,
         );
     }
-
 }

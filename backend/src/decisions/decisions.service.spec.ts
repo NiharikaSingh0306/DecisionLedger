@@ -15,8 +15,10 @@ describe('DecisionsService', () => {
       findMany: jest.fn(),
       count: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       update: jest.fn(),
       create: jest.fn(),
+
     },
     decisionVersion: {
       findFirst: jest.fn(),
@@ -69,7 +71,7 @@ describe('DecisionsService', () => {
     const result = await service.findAll({
       page: 1,
       limit: 10,
-    });
+    }, 'user-1');
 
     expect(result).toEqual({
       data: mockDecisions,
@@ -93,7 +95,7 @@ describe('DecisionsService', () => {
       status: 'ACCEPTED',
       page: 1,
       limit: 10,
-    });
+    }, 'user-1');
 
     expect(mockPrisma.decision.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -118,15 +120,16 @@ describe('DecisionsService', () => {
     );
   });
   it('should throw NotFoundException when decision does not exist', async () => {
-    mockPrisma.decision.findUnique = jest.fn().mockResolvedValue(null);
+    mockPrisma.decision.findFirst.mockResolvedValue(null);
 
     await expect(
-      service.findOne('non-existent-id'),
+      service.findOne('non-existent-id', 'user-1'),
     ).rejects.toThrow(NotFoundException);
   });
   it('should reject invalid status transitions', async () => {
     mockPrisma.decision.findUnique.mockResolvedValue({
       id: 'decision-1',
+      userId: 'user-1',
       title: 'Choose PostgreSQL',
       context: 'Database selection',
       options: null,
@@ -143,7 +146,7 @@ describe('DecisionsService', () => {
     await expect(
       service.update('decision-1', {
         status: 'PROPOSED',
-      }),
+      }, 'user-1'),
     ).rejects.toThrow(BadRequestException);
 
     expect(mockPrisma.decision.update).not.toHaveBeenCalled();
@@ -178,7 +181,7 @@ describe('DecisionsService', () => {
 
     const result = await service.update('decision-2', {
       status: 'ACCEPTED',
-    });
+    }, 'user-1');
 
     expect(result.status).toBe('ACCEPTED');
 
@@ -194,7 +197,7 @@ describe('DecisionsService', () => {
     );
   });
   it('should return decision versions in descending order', async () => {
-    mockPrisma.decision.findUnique.mockResolvedValue({
+    mockPrisma.decision.findFirst.mockResolvedValue({
       id: 'decision-1',
     });
 
@@ -206,7 +209,7 @@ describe('DecisionsService', () => {
 
     mockPrisma.decisionVersion.findMany.mockResolvedValue(versions);
 
-    const result = await service.findVersions('decision-1');
+    const result = await service.findVersions('decision-1', 'user-1');
 
     expect(result).toEqual(versions);
 
@@ -216,8 +219,9 @@ describe('DecisionsService', () => {
     });
   });
   it('should compare two versions and return changed fields', async () => {
-    mockPrisma.decision.findUnique.mockResolvedValue({
+    mockPrisma.decision.findFirst.mockResolvedValue({
       id: 'decision-1',
+      userId: 'user-1'
     });
 
     mockPrisma.decisionVersion.findUnique = jest
@@ -235,7 +239,7 @@ describe('DecisionsService', () => {
         status: 'PROPOSED',
       });
 
-    const result = await service.compareVersions('decision-1', 1, 2);
+    const result = await service.compareVersions('decision-1', 1, 2, 'user-1');
 
     expect(result.changes).toEqual({
       title: {
@@ -272,7 +276,7 @@ describe('DecisionsService', () => {
       owner: 'Niharika',
     };
 
-    mockPrisma.decision.findUnique.mockResolvedValue(decision);
+    mockPrisma.decision.findFirst.mockResolvedValue(decision);
 
     mockPrisma.decisionVersion.findUnique.mockResolvedValue(oldVersion);
 
@@ -298,10 +302,9 @@ describe('DecisionsService', () => {
       'decision-1',
       1,
       'Restore original decision',
+      'user-1',
     );
-
     expect(mockPrisma.decision.update).toHaveBeenCalled();
-
     expect(mockPrisma.decisionVersion.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -337,7 +340,7 @@ describe('DecisionsService', () => {
       rationale: 'Reliable database',
       owner: 'Niharika',
       commitMessage: 'Initial database decision',
-    });
+    }, 'user-1');
 
     expect(result).toEqual(createdDecision);
 

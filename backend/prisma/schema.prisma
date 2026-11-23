@@ -28,7 +28,8 @@ model Decision{
   owner           String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
-
+  userId          String
+  user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
   //one decision can have multiple historical versions
   versions        DecisionVersion[]
 
@@ -56,4 +57,13 @@ model DecisionVersion {
   @@unique([decisionId, versionNumber])
   @@index([decisionId])
   @@index([createdAt])
+}
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  decisions    Decision[]
 }

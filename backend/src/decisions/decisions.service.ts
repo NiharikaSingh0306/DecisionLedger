@@ -9,15 +9,14 @@ import { Prisma, DecisionStatus } from '@prisma/client';
 export class DecisionsService {
     constructor(private readonly prisma: PrismaService) { }
     // create a new decision along with its first version
-    async create(createDecisionDto: CreateDecisionDto) {
+    async create(createDecisionDto: CreateDecisionDto, userId: string) {
         const { commitMessage, ...decisionData } = createDecisionDto;
 
         return this.prisma.$transaction(async (tx) => {
             // 1. Create the decision
             const decision = await tx.decision.create({
-                data: decisionData,
+                data: { ...decisionData, userId, }
             });
-
             // 2. Create its initial version (V1)
             await tx.decisionVersion.create({
                 data: {
@@ -44,7 +43,7 @@ export class DecisionsService {
         owner?: string;
         page?: number;
         limit?: number;
-    }) {
+    }, userId: string) {
         const {
             search,
             status,
@@ -54,6 +53,7 @@ export class DecisionsService {
         } = filters;
 
         const where: Prisma.DecisionWhereInput = {
+            userId,
             ...(status && { status }),
             ...(owner && {
                 owner: {
@@ -102,9 +102,9 @@ export class DecisionsService {
         };
     }
     // retrieve one decision by ID
-    async findOne(id: string) {
-        const decision = await this.prisma.decision.findUnique({
-            where: { id },
+    async findOne(id: string, userId: string) {
+        const decision = await this.prisma.decision.findFirst({
+            where: { id, userId },
         });
 
         if (!decision) {
@@ -114,13 +114,13 @@ export class DecisionsService {
         return decision;
     }
     // update an existing decision and create a new version
-    async update(id: string, updateDecisionDto: UpdateDecisionDto) {
+    async update(id: string, updateDecisionDto: UpdateDecisionDto, userId: string) {
         const { commitMessage, ...decisionData } = updateDecisionDto;
 
         return this.prisma.$transaction(async (tx) => {
             // 1. Check whether the decision exists
             const existingDecision = await tx.decision.findUnique({
-                where: { id },
+                where: { id, userId },
             });
 
             if (!existingDecision) {
@@ -189,8 +189,8 @@ export class DecisionsService {
             REVERSED: [],
         };
     //retrieve all versions of a decision
-    async findVersions(id: string) {
-        await this.findOne(id);
+    async findVersions(id: string, userId: string) {
+        await this.findOne(id, userId);
 
         return this.prisma.decisionVersion.findMany({
             where: { decisionId: id },
@@ -200,8 +200,8 @@ export class DecisionsService {
         });
     }
     //retrieve a specific version of a decision
-    async findVersion(id: string, versionNumber: number) {
-        await this.findOne(id);
+    async findVersion(id: string, versionNumber: number, userId: string) {
+        await this.findOne(id, userId);
         const version = await this.prisma.decisionVersion.findUnique({
             where: {
                 decisionId_versionNumber: {
@@ -222,9 +222,10 @@ export class DecisionsService {
         id: string,
         fromVersionNumber: number,
         toVersionNumber: number,
+        userId: string,
     ) {
         // 1)check whether the decision exists
-        await this.findOne(id);
+        await this.findOne(id, userId);
 
         // 2)fetch both versions
         const [fromVersion, toVersion] = await Promise.all([
@@ -286,12 +287,13 @@ export class DecisionsService {
     async restoreVersion(
         id: string,
         versionNumber: number,
-        commitMessage?: string,
+        commitMessage: string | undefined,
+        userId: string,
     ) {
         return this.prisma.$transaction(async (tx) => {
             // 1. Check whether the decision exists
             const decision = await tx.decision.findUnique({
-                where: { id },
+                where: { id, userId },
             });
 
             if (!decision) {

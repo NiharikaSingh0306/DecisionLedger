@@ -1,6 +1,8 @@
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { DecisionsController } from './decisions.controller';
 import { DecisionsService } from './decisions.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 describe('DecisionsController', () => {
   let controller: DecisionsController;
@@ -25,7 +27,10 @@ describe('DecisionsController', () => {
           useValue: mockDecisionsService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .compile();
 
     controller = module.get<DecisionsController>(DecisionsController);
   });
