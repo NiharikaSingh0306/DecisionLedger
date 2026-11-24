@@ -7,7 +7,7 @@ import {
     Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { DecisionStatus } from '@prisma/client';
+import { DecisionStatus, DecisionVisibility } from '@prisma/client';
 
 export class FindDecisionsDto {
     @IsOptional()
@@ -34,4 +34,8 @@ export class FindDecisionsDto {
     @Min(1)
     @Max(100)
     limit: number = 10;
+
+    @IsOptional()
+    @IsEnum(DecisionVisibility)
+    visibility?: DecisionVisibility;
 }

@@ -101,20 +101,30 @@ describe('DecisionsService', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           status: 'ACCEPTED',
+
           OR: [
-            {
-              title: {
-                contains: 'PostgreSQL',
-                mode: 'insensitive',
-              },
-            },
-            {
-              context: {
-                contains: 'PostgreSQL',
-                mode: 'insensitive',
-              },
-            },
+            { userId: 'user-1' },
+            { visibility: 'PUBLIC' },
           ],
+
+          AND: expect.arrayContaining([
+            expect.objectContaining({
+              OR: [
+                {
+                  title: {
+                    contains: 'PostgreSQL',
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  context: {
+                    contains: 'PostgreSQL',
+                    mode: 'insensitive',
+                  },
+                },
+              ],
+            }),
+          ]),
         }),
       }),
     );

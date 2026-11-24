@@ -25,6 +25,7 @@ model Decision{
   decisionSummary String
   rationale       String
   status          DecisionStatus @default(PROPOSED)
+    visibility      DecisionVisibility @default(PRIVATE)
   owner           String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -35,6 +36,10 @@ model Decision{
 
   @@index([status])
   @@index([createdAt])
+}
+enum DecisionVisibility {
+  PRIVATE
+  PUBLIC
 }
 
 model DecisionVersion {

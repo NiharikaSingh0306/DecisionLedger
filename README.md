@@ -1,8 +1,10 @@
 # Decision Ledger
 
-Decision Ledger is a backend-driven application designed to record, track, compare, and restore important technical and organizational decisions.
+**Version-controlled decision management for teams and organizations.**
 
-Inspired by Git's version-control philosophy, it maintains a chronological history of decisions, ensuring that every change is traceable and previous versions are preserved.
+Decision Ledger is a full-stack application designed to record, track, compare, and restore important technical and organizational decisions.
+
+Inspired by Git's version-control philosophy, it maintains a chronological history of decisions, preserving previous versions and making changes traceable.
 
 Instead of simply storing the latest decision, Decision Ledger captures how and why a decision evolves over time.
 
@@ -10,13 +12,11 @@ Instead of simply storing the latest decision, Decision Ledger captures how and 
 
 ## Key Features
 
-### 1. Decision Management (CRUD)
-- Create new decisions.
-- Retrieve all decisions.
-- Retrieve an individual decision.
-- Update existing decisions.
-- Track decision status and ownership.
-- Associate every decision with its authenticated user.
+### 1. Decision Management
+- Create, retrieve, and update decisions.
+- Maintain decision context, alternatives, rationale, and summaries.
+- Track decision status and assigned ownership.
+- Associate every decision with its creator.
 
 ### 2. Automatic Version Control
 - Automatically creates Version 1 when a decision is created.
@@ -25,38 +25,45 @@ Instead of simply storing the latest decision, Decision Ledger captures how and 
 - Preserves historical snapshots instead of overwriting them.
 
 ### 3. Decision History
-- Retrieve the complete version history of a decision.
-- Retrieve a specific historical version.
-- View historical decision details independently.
+- Retrieve the complete version history.
+- View individual historical versions.
+- Inspect previous decision details independently.
 
-### 4. Version Comparison (Diff Engine)
-- Compare any two versions of a decision.
+### 4. Version Comparison
+- Compare any two versions.
 - Identify modified fields.
-- Display old and new values for every changed field.
-- Return an empty changes object when versions are identical.
+- Display previous and updated values.
+- Detect when two versions are identical.
 
 ### 5. Version Restoration
-- Restore a decision to any previous version.
-- Create a new version after restoration instead of overwriting history.
-- Preserve the original historical snapshots.
-- Track which version was restored.
+- Restore a decision to an earlier version.
+- Create a new version after restoration.
+- Preserve all original historical snapshots.
+- Track the source version used during restoration.
 
-### 6. Commit Messages & Version Metadata
-- Attach meaningful commit messages to decision changes.
+### 6. Commit Messages and Metadata
+- Attach commit messages to decision changes.
 - Record why a decision was created, modified, or restored.
-- Track the source version during restoration.
-- Maintain timestamps for historical versions.
+- Maintain restoration metadata and timestamps.
 
-### 7. JWT Authentication & Authorization
-- Register users with email and password.
-- Securely hash passwords using bcrypt.
-- Authenticate users through login credentials.
-- Generate signed JWT access tokens.
-- Protect decision endpoints using a custom JWT authentication guard.
-- Require authentication before accessing decision APIs.
-- Automatically associate newly created decisions with the authenticated user.
-- Restrict decision retrieval, updates, and version operations to their owners.
-- Prevent users from accessing other users' decisions.
+### 7. Authentication and Authorization
+- User registration and login.
+- Password hashing using bcrypt.
+- JWT-based authentication.
+- Protected decision APIs.
+- Ownership-based editing and restoration permissions.
+
+### 8. Public and Private Decisions
+- Create decisions with PUBLIC or PRIVATE visibility.
+- View public decisions across authenticated accounts.
+- Keep private decisions accessible only to their creators.
+- Allow read-only access to public decision details and version history.
+- Restrict editing and restoration to the decision creator.
+
+### 9. Search, Filtering, and Pagination
+- Search decisions by title and context.
+- Filter by status, assigned owner, and visibility.
+- Paginate decision results.
 
 ---
 
@@ -64,45 +71,48 @@ Instead of simply storing the latest decision, Decision Ledger captures how and 
 
 | Technology | Purpose |
 |---|---|
+| React | Frontend framework |
+| TypeScript | Frontend and backend language |
+| Vite | Frontend development and build tooling |
+| Tailwind CSS | UI styling |
 | NestJS | Backend framework |
-| TypeScript | Programming language |
 | PostgreSQL | Relational database |
 | Prisma ORM | Database access and migrations |
 | class-validator | Request validation |
 | bcrypt | Password hashing |
 | JSON Web Tokens | Authentication |
-| @nestjs/jwt | JWT generation and verification |
 | Jest | Backend unit testing |
-| REST API | Client-server communication |
+| Axios | Frontend API communication |
 
 ---
 
 ## Database Design
 
-Decision Ledger currently uses three primary models:
+Decision Ledger uses three primary database models.
 
-**User**
+### User
 - Stores registered user information.
 - Maintains a unique email address.
-- Stores the bcrypt password hash.
+- Stores the password hash.
 - Maintains creation and update timestamps.
 - Has a one-to-many relationship with decisions.
 
-**Decision**
+### Decision
 - Stores the latest state of a decision.
-- Contains title, context, options, rationale, summary, status, and owner.
-- Tracks creation and update timestamps.
-- Contains a mandatory `userId` referencing its owner.
+- Contains title, context, options, summary, rationale, and status.
+- Tracks assigned ownership and visibility.
+- References the user who created the decision.
+- Maintains creation and update timestamps.
 
-**DecisionVersion**
+### DecisionVersion
 - Stores historical snapshots of decisions.
 - Maintains sequential version numbers.
 - Stores commit messages and restoration metadata.
-- Preserves previous states independently.
+- Preserves previous decision states independently.
 
 ### Relationships
 
-- One user can own multiple decisions.
+- One user can create multiple decisions.
 - One decision can have multiple historical versions.
 
 `User (1) → Decision (Many)`
@@ -111,18 +121,18 @@ Decision Ledger currently uses three primary models:
 
 ---
 
-## Authentication API Documentation
+## Authentication API
 
 Base URL: `http://localhost:3000`
 
-Authentication endpoints are public and do not require an existing JWT.
+Authentication endpoints do not require an existing JWT.
 
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/auth/register` | Register a new user |
+| POST | `/auth/register` | Register a user |
 | POST | `/auth/login` | Authenticate and receive a JWT |
 
-### Register a User
+### Register
 
 `POST /auth/register`
 
@@ -134,21 +144,6 @@ Example request:
   "password": "Password123"
 }
 ```
-
-Example response:
-
-```json
-{
-  "message": "User registered successfully",
-  "user": {
-    "id": "generated-user-id",
-    "email": "user@example.com",
-    "createdAt": "2026-11-23T10:00:00.000Z"
-  }
-}
-```
-
-Passwords are hashed using bcrypt before being stored in the database.
 
 ### Login
 
@@ -163,52 +158,45 @@ Example request:
 }
 ```
 
-Example response:
+The login endpoint returns an access token and authenticated user information.
 
-```json
-{
-  "message": "Login successful",
-  "accessToken": "your-jwt-access-token",
-  "user": {
-    "id": "generated-user-id",
-    "email": "user@example.com"
-  }
-}
-```
+Passwords are hashed using bcrypt before storage.
 
 ### Access Protected Endpoints
 
-After logging in, include the JWT in the HTTP Authorization header:
+Include the JWT in the HTTP Authorization header:
 
 ```http
 Authorization: Bearer <your-access-token>
 ```
 
-- JWT tokens are signed using a secret configured through environment variables.
+- Tokens are signed using a secret configured through environment variables.
 - Tokens expire after one hour.
 - Missing, invalid, and expired tokens are rejected.
-- The authentication guard verifies the token and attaches the authenticated user's information to the request.
-
-Unauthenticated requests receive HTTP 401 Unauthorized.
+- Protected routes require successful JWT verification.
 
 ---
 
-## Decision API Documentation
+## Decision API
 
-All decision endpoints require a valid JWT access token.
+All decision endpoints require a valid JWT.
 
 | Method | Endpoint | Description |
 |---|---|---|
 | POST | `/decisions` | Create a decision |
-| GET | `/decisions` | Retrieve the authenticated user's decisions |
-| GET | `/decisions/:id` | Retrieve an individual decision |
+| GET | `/decisions` | Retrieve accessible decisions |
+| GET | `/decisions/:id` | Retrieve a decision |
 | PATCH | `/decisions/:id` | Update a decision |
 | GET | `/decisions/:id/versions` | Retrieve version history |
 | GET | `/decisions/:id/versions/:versionNumber` | Retrieve a specific version |
-| GET | `/decisions/:id/versions/compare?from=1&to=2` | Compare two versions |
+| GET | `/decisions/:id/versions/compare?from=1&to=2` | Compare versions |
 | POST | `/decisions/:id/versions/:versionNumber/restore` | Restore a historical version |
 
-### Example: Create a Decision
+### Create a Decision
+
+`POST /decisions`
+
+Example request:
 
 ```json
 {
@@ -217,15 +205,20 @@ All decision endpoints require a valid JWT access token.
   "options": ["MongoDB", "PostgreSQL", "MySQL"],
   "decisionSummary": "Use PostgreSQL as the primary database.",
   "rationale": "PostgreSQL provides ACID transactions and relational integrity.",
-  "status": "ACCEPTED",
-  "owner": "Niharika",
+  "status": "PROPOSED",
+  "owner": "Development Team",
+  "visibility": "PRIVATE",
   "commitMessage": "Initial database selection"
 }
 ```
 
-The backend automatically assigns the authenticated user's ID. Clients must not supply their own `userId`.
+The backend automatically associates the decision with the authenticated user. Clients must not supply their own `userId`.
 
-### Example: Update a Decision
+### Update a Decision
+
+`PATCH /decisions/:id`
+
+Example request:
 
 ```json
 {
@@ -234,72 +227,67 @@ The backend automatically assigns the authenticated user's ID. Clients must not 
 }
 ```
 
-### Example: Restore a Version
+### Restore a Version
 
 `POST /decisions/:id/versions/1/restore`
 
-```json
-{
-  "commitMessage": "Restored original decision after reviewing alternatives"
-}
-```
-
-A restoration creates a new version and records its source:
-
-```json
-{
-  "versionNumber": 5,
-  "commitMessage": "Restored original decision after reviewing alternatives",
-  "restoredFromVersion": 1
-}
-```
-
-### User Ownership and Isolation
-
-Decision Ledger enforces ownership at the service layer.
-
-- Users can retrieve only their own decisions.
-- Users cannot update another user's decisions.
-- Users cannot access another user's version history.
-- Version comparison and restoration enforce parent-decision ownership.
-- Attempts to access another user's decision return HTTP 404 Not Found.
+Restoration creates a new version rather than overwriting historical data.
 
 ---
 
-## Search, Filtering & Pagination
+## Access Control and Visibility
 
-The decisions API supports searching, filtering, and paginating decision records belonging to the authenticated user.
+Decision Ledger supports two visibility levels.
 
-### Query Parameters
+| Visibility | Access |
+|---|---|
+| PRIVATE | Only the creator can access the decision |
+| PUBLIC | Any authenticated user can view the decision |
+
+### Permission Rules
+
+| Operation | Creator | Other authenticated users |
+|---|---|---|
+| View private decision | Yes | No |
+| View public decision | Yes | Yes |
+| View public version history | Yes | Yes |
+| Edit decision | Yes | No |
+| Restore historical version | Yes | No |
+
+Additional safeguards:
+- Private decisions are excluded from other users' results.
+- Public decisions are available in read-only mode to other users.
+- Creator information is displayed separately from the assigned decision owner.
+- Unauthorized access to another user's private decision returns HTTP 404.
+
+---
+
+## Search, Filtering and Pagination
+
+The decisions API supports the following query parameters:
 
 | Parameter | Description | Example |
 |---|---|---|
-| search | Search title and context | `search=database` |
-| status | Filter by decision status | `status=ACCEPTED` |
-| owner | Filter by owner | `owner=Niharika` |
-| page | Page number (default: 1) | `page=1` |
-| limit | Records per page (default: 10, max: 100) | `limit=10` |
+| `search` | Search title and context | `search=database` |
+| `status` | Filter by decision status | `status=ACCEPTED` |
+| `owner` | Filter by assigned owner | `owner=Development` |
+| `visibility` | Filter by visibility | `visibility=PUBLIC` |
+| `page` | Page number | `page=1` |
+| `limit` | Records per page | `limit=10` |
 
-### Example Request
+Example request:
 
-`GET /decisions?search=PostgreSQL&status=ACCEPTED&owner=Niharika&page=1&limit=10`
+```http
+GET /decisions?search=PostgreSQL&status=ACCEPTED&visibility=PUBLIC&page=1&limit=10
+```
 
-### Response
-
-Returns matching decisions along with pagination metadata:
-
-- total: Total matching records
-- page: Current page
-- limit: Records per page
-- totalPages: Total number of pages
-
-Invalid query parameters return HTTP 400 Bad Request.
+The response includes matching decisions and pagination metadata.
 
 ---
 
 ## Decision Lifecycle Management
 
-Decision Ledger enforces valid status transitions to maintain decision integrity.
+Decision Ledger enforces valid status transitions.
 
 | Current Status | Allowed Next Status |
 |---|---|
@@ -308,64 +296,10 @@ Decision Ledger enforces valid status transitions to maintain decision integrity
 | SUPERSEDED | None |
 | REVERSED | None |
 
-- Invalid status transitions return HTTP 400.
+- Invalid transitions return HTTP 400.
 - Every valid update creates a new decision version.
-- Rejected transitions do not modify the decision or its version history.
-- Restoring a historical version is handled separately from normal lifecycle transitions.
-
----
-
-## Testing
-
-Decision Ledger uses Jest for backend unit testing.
-
-### Run Tests
-
-From the `backend` directory:
-
-```bash
-npm test -- --runInBand
-```
-
-### Test Coverage
-
-The automated unit tests cover:
-
-**Decision Management**
-- Service initialization.
-- Decision creation and automatic Version 1 creation.
-- Search, filtering, and pagination.
-- Handling non-existent decisions.
-- Valid and invalid decision status transitions.
-- Automatic version creation during updates.
-- Decision version history retrieval.
-- Version comparison and change detection.
-- Restoring older decision versions.
-
-**Authentication**
-- User registration.
-- Password hashing.
-- Duplicate email rejection.
-- Successful login and JWT generation.
-- Invalid email and password handling.
-
-**JWT Authentication Guard**
-- Missing authorization headers.
-- Invalid authorization schemes.
-- Invalid and expired tokens.
-- Empty Bearer tokens.
-- Malformed JWT payloads.
-- Successful token verification and request user attachment.
-
-### Build Verification
-
-Run the production build:
-
-```bash
-npm run build
-```
-
-The backend has been verified with **25 passing tests across 5 test suites**.
+- Rejected transitions do not modify the decision or its history.
+- Restoration is handled separately from normal lifecycle transitions.
 
 ---
 
@@ -382,21 +316,15 @@ The backend has been verified with **25 passing tests across 5 test suites**.
 
 ```bash
 git clone https://github.com/NiharikaSingh0306/DecisionLedger.git
+cd DecisionLedger
 ```
 
-### 2. Navigate to the Backend
+### 2. Backend Setup
 
 ```bash
-cd DecisionLedger/backend
-```
-
-### 3. Install Dependencies
-
-```bash
+cd backend
 npm install
 ```
-
-### 4. Configure Environment Variables
 
 Create a `.env` file inside the backend directory:
 
@@ -406,88 +334,108 @@ SHADOW_DATABASE_URL="postgresql://USERNAME:PASSWORD@localhost:5432/decision_ledg
 JWT_SECRET="YOUR_SECURE_RANDOM_SECRET"
 ```
 
-Replace the database placeholders with your PostgreSQL credentials.
+Replace the placeholders with your PostgreSQL credentials and a secure JWT secret.
 
-Generate a cryptographically secure JWT secret and keep it private.
-
-**Security notes:**
-- Never commit `.env` to GitHub.
-- Never expose your JWT secret.
-- Use a different secret for production.
-- Keep database credentials private.
-
-### 5. Run Database Migrations
+Run database migrations and generate Prisma Client:
 
 ```bash
 npx prisma migrate dev
-```
-
-### 6. Generate Prisma Client
-
-```bash
 npx prisma generate
 ```
 
-### 7. Start the Development Server
+Start the backend:
 
 ```bash
 npm run start:dev
 ```
 
-The backend should now be accessible at:
+Backend URL:
 
 `http://localhost:3000`
 
-### 8. Register and Log In
+### 3. Frontend Setup
 
-Register a user through:
+Open another terminal from the project root:
 
-`POST /auth/register`
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-Then authenticate through:
+Vite will display the local frontend URL, typically:
 
-`POST /auth/login`
+`http://localhost:5173`
 
-Use the returned JWT access token when accessing protected decision endpoints.
+### Security Notes
+
+- Never commit `.env` files to GitHub.
+- Never expose database credentials or JWT secrets.
+- Use a separate secure secret for production.
+- Configure production database credentials securely.
+
+---
+
+## Testing
+
+Decision Ledger uses Jest for backend unit testing.
+
+Run tests from the `backend` directory:
+
+```bash
+npm test -- --runInBand
+```
+
+Run the backend production build:
+
+```bash
+npm run build
+```
+
+Run frontend TypeScript verification:
+
+```bash
+npx tsc --noEmit
+```
+
+Run the frontend production build:
+
+```bash
+npm run build
+```
+
+### Backend Test Verification
+
+The backend has been verified with **25 passing tests across 5 test suites**.
 
 ---
 
 ## Project Roadmap
 
-The project is being developed incrementally.
-
 - [x] NestJS backend setup
 - [x] PostgreSQL integration
-- [x] Decision CRUD APIs
 - [x] Prisma database migrations
-- [x] Decision versioning
+- [x] Decision CRUD APIs
+- [x] Automatic decision versioning
 - [x] Historical version retrieval
-- [x] Version comparison engine
+- [x] Version comparison
 - [x] Historical version restoration
 - [x] Commit messages and restoration metadata
 - [x] Decision lifecycle management
 - [x] Search, filtering, and pagination
-- [x] Backend hardening and automated testing
 - [x] JWT authentication
-- [x] User ownership and decision isolation
-- [x] Authentication unit testing
-- [ ] Role-based access control
+- [x] User ownership and access control
+- [x] Public and private decision visibility
+- [x] React frontend
+- [x] Frontend-backend integration
+- [x] Backend unit testing
 - [ ] GitHub integration
-- [ ] React frontend
 - [ ] Deployment and production documentation
 
----
-
-## Vision
-
-The long-term goal of Decision Ledger is to bring version-control principles to organizational decision-making.
-
-Just as Git tracks how code evolves, Decision Ledger aims to track how decisions evolve — including their reasoning, alternatives, dependencies, and historical context.
-
-**Because understanding why something was built is just as important as knowing what was built.**
 
 ---
 
 ## Author
 
 **Niharika Singh**
+

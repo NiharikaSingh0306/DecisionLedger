@@ -1,0 +1,270 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+.page {
+  font-family: 'Quicksand', sans-serif;
+}
+
+.page * {
+  font-family: inherit;
+}
+
+.page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #101824;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ring container */
+.ring {
+  position: relative;
+  width: min(550px, 92vw);
+  aspect-ratio: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ring i {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--clr);
+  transition: 0.5s;
+  pointer-events: none;
+}
+
+.ring i:nth-child(1) {
+  border-radius: 38% 62% 63% 37% / 41% 44% 56% 59%;
+  animation: animate 6s linear infinite;
+}
+
+.ring i:nth-child(2) {
+  border-radius: 41% 44% 56% 59% / 38% 62% 63% 37%;
+  animation: animate 4s linear infinite;
+}
+
+.ring i:nth-child(3) {
+  border-radius: 41% 44% 56% 59% / 38% 62% 63% 37%;
+  animation: animate2 10s linear infinite;
+}
+
+.ring:hover i {
+  border-width: 5px;
+  filter: drop-shadow(0 0 12px var(--clr)) drop-shadow(0 0 25px var(--clr));
+}
+
+@keyframes animate {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes animate2 {
+  0% {
+    transform: rotate(360deg);
+  }
+
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* login content */
+.login {
+  position: absolute;
+  width: min(300px, 76%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 17px;
+  z-index: 2;
+}
+
+.brand {
+  width: 42px;
+  height: 42px;
+  background: #702C43;
+  color: #F3EBDD;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-family: Georgia, serif;
+  font-size: 23px;
+  margin-bottom: 2px;
+}
+
+.login h2 {
+  font-size: 2em;
+  color: #F3EBDD;
+  font-weight: 500;
+}
+
+.subtitle {
+  color: #C98F83;
+  font-size: 12px;
+  letter-spacing: 1px;
+  margin-top: -10px;
+}
+
+/* inputs */
+.login form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+
+.login .inputBx {
+  position: relative;
+  width: 100%;
+}
+
+.login .inputBx input {
+  position: relative;
+  width: 100%;
+  padding: 12px 20px;
+  background: rgba(16, 24, 36, 0.8);
+  border: 1px solid rgba(243, 235, 221, 0.55);
+  border-radius: 40px;
+  font-size: 0.95em;
+  color: #F3EBDD;
+  outline: none;
+  transition: 0.3s;
+}
+
+.login .inputBx input:focus {
+  border-color: #C98F83;
+  box-shadow: 0 0 12px rgba(201, 143, 131, 0.2);
+}
+
+.login .inputBx input::placeholder {
+  color: rgba(243, 235, 221, 0.65);
+}
+
+.login .inputBx input[type="submit"] {
+  background: linear-gradient(45deg, #702C43, #91445C);
+  border: none;
+  color: #F3EBDD;
+  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.login .inputBx input[type="submit"]:hover {
+  box-shadow: 0 0 18px rgba(145, 68, 92, 0.5);
+}
+
+.login .links {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+}
+
+.login .links a {
+  color: #C98F83;
+  font-size: 11px;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.login .links a:hover {
+  color: #F3EBDD;
+}
+
+/* footer */
+.footer {
+  position: absolute;
+  bottom: 22px;
+  color: rgba(243, 235, 221, 0.35);
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+
+/* for mobile */
+@media (max-width: 480px) {
+  .ring {
+    width: 96vw;
+  }
+
+  .login {
+    width: 72%;
+  }
+
+  .login h2 {
+    font-size: 1.7em;
+  }
+
+  .login .inputBx input {
+    padding: 11px 15px;
+    font-size: 0.85em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring i {
+    animation: none;
+  }
+}
+
+.login {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.ring {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.page {
+  border: none !important;
+  outline: none !important;
+}
+
+#root {
+  border: none !important;
+  outline: none !important;
+}
+
+.auth-error,
+.auth-success {
+  width: 100%;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.auth-error {
+  color: #E89A9A;
+}
+
+.auth-success {
+  color: #C98F83;
+}
+
+.login .inputBx input[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

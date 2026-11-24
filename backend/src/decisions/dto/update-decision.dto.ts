@@ -7,7 +7,7 @@ import {
     IsEnum,
 } from 'class-validator';
 
-import { DecisionStatus } from '@prisma/client';
+import { DecisionStatus, DecisionVisibility } from '@prisma/client';
 
 export class UpdateDecisionDto {
     @IsOptional()
@@ -46,4 +46,8 @@ export class UpdateDecisionDto {
     @IsOptional()
     @IsString()
     commitMessage?: string;
+
+    @IsOptional()
+    @IsEnum(DecisionVisibility)
+    visibility?: DecisionVisibility
 }

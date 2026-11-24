@@ -41,6 +41,7 @@ export class DecisionsService {
         search?: string;
         status?: DecisionStatus;
         owner?: string;
+        visibility?: 'PUBLIC' | 'PRIVATE';
         page?: number;
         limit?: number;
     }, userId: string) {
@@ -48,12 +49,16 @@ export class DecisionsService {
             search,
             status,
             owner,
+            visibility,
             page = 1,
             limit = 10,
         } = filters;
 
         const where: Prisma.DecisionWhereInput = {
-            userId,
+            OR: [
+                { userId },
+                { visibility: 'PUBLIC' },
+            ],
             ...(status && { status }),
             ...(owner && {
                 owner: {
@@ -61,32 +66,46 @@ export class DecisionsService {
                     mode: 'insensitive',
                 },
             }),
-            ...(search && {
-                OR: [
+            ...(visibility ? { visibility } : {}),
+            AND: search
+                ? [
                     {
-                        title: {
-                            contains: search,
-                            mode: 'insensitive',
-                        },
+                        OR: [
+                            {
+                                title: {
+                                    contains: search,
+                                    mode: 'insensitive',
+                                },
+                            },
+                            {
+                                context: {
+                                    contains: search,
+                                    mode: 'insensitive',
+                                },
+                            },
+                        ],
                     },
-                    {
-                        context: {
-                            contains: search,
-                            mode: 'insensitive',
-                        },
-                    },
-                ],
-            }),
-        };
-
+                ]
+                : undefined,
+        }
         const [decisions, total] = await this.prisma.$transaction([
             this.prisma.decision.findMany({
                 where,
                 orderBy: {
                     createdAt: 'desc',
                 },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            email: true,
+                        },
+                    },
+                },
                 skip: (page - 1) * limit,
                 take: limit,
+
+
             }),
             this.prisma.decision.count({ where }),
         ]);
@@ -104,14 +123,30 @@ export class DecisionsService {
     // retrieve one decision by ID
     async findOne(id: string, userId: string) {
         const decision = await this.prisma.decision.findFirst({
-            where: { id, userId },
-        });
+            where: {
+                id,
+                OR: [
+                    { userId },
+                    { visibility: 'PUBLIC' },
+                ],
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                    },
+                },
+            },
+        })
 
         if (!decision) {
-            throw new NotFoundException(`Decision with ID ${id} not found`);
+            throw new NotFoundException(
+                `Decision with ID ${id} not found`,
+            )
         }
 
-        return decision;
+        return decision
     }
     // update an existing decision and create a new version
     async update(id: string, updateDecisionDto: UpdateDecisionDto, userId: string) {
